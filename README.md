@@ -23,64 +23,140 @@ If you have any difficulties in using CB-Ladybug, please let us know.
 
 ### Preparation
 
-* Golang 1.16.+ ([Download and install](https://golang.org/doc/install))
+- Golang 1.16.+ ([Download and install](https://golang.org/doc/install))
 
 ### Dependencies
 
-* CB-MCKS [v0.4.3](https://github.com/cloud-barista/cb-mcks/releases/tag/v0.4.3)
-* CB-Tumblebug [v0.4.7](https://github.com/cloud-barista/cb-tumblebug/releases/tag/v0.4.7)
-* CB-Spider [v0.4.10](https://github.com/cloud-barista/cb-spider/releases/tag/v0.4.10)
+- CB-MCKS [v0.4.5](https://github.com/cloud-barista/cb-mcks/releases/tag/v0.4.5)
+- CB-Tumblebug [v0.4.17](https://github.com/cloud-barista/cb-tumblebug/releases/tag/v0.4.17)
+- CB-Spider [v0.4.18](https://github.com/cloud-barista/cb-spider/releases/tag/v0.4.18)
 
 
 ### Clone
 
-```
-$ git clone https://github.com/cloud-barista/poc-cb-ladybug.git
-$ cd poc-cb-ladybug
-$ go get -v all
-```
+- Clone source code
+  ```bash
+  git clone https://github.com/cloud-barista/poc-cb-ladybug.git cb-ladybug
+  cd cb-ladybug
+  go get -v all
+  ```
 
 ### Run 
 
-```
-$ export CBLOG_ROOT="$(pwd)"
-$ export CBSTORE_ROOT="$(pwd)"
-$ go run cmd/cb-ladybug/main.go
-```
+- Setup environment variables
+
+  Check and modify environment variables in `cb-ladybug/conf/setup.env`
+  ```bash
+  cat conf/setup.env
+  source conf/setup.env
+   ```
+
+- Run CB-Ladybug
+  ```bash
+  go run cmd/cb-ladybug/main.go
+   ```
 
 ### Build and Execute
 
-```
-$ go build -o cb-ladybug cmd/cb-ladybug/main.go
-```
+- Build CB-Ladybug
+  ```bash
+  cd $(APP_ROOT)
+  make
+  ```
 
-```
-$ export CBLOG_ROOT="$(pwd)"
-$ export CBSTORE_ROOT="$(pwd)"
-$ nohup ./cb-ladybug & > /dev/null
-```
-
-### Test
-
-```
-$ ./scripts/get-health.sh
-
-[INFO]
-- Ladybug URL is 'http://localhost:1592/ladybug'
-
-------------------------------------------------------------------------------
-cloud-barista cb-ladybug is alived
-```
+- Execute CB-Ladybug
+  ```bash
+  make run
+  ```
 
 ### API documentation
 
-* Under construction
+- Under construction
 
 ## Documents
 
-* Under construction
+- Under construction
 
 
 ## Contribution
 Learn how to start contribution on the [Contributing Guideline](https://github.com/cloud-barista/docs/tree/master/contributing) and [Style Guideline](https://github.com/cloud-barista/poc-cb-ladybug/blob/master/STYLE_GUIDE.md)
 
+### Test
+
+- Check health status
+
+  ```bash
+  ./scripts/get-health.sh
+
+  [INFO]
+  - Ladybug URL is 'http://localhost:1592/ladybug'
+
+  ------------------------------------------------------------------------------
+  cloud-barista cb-ladybug is alived
+  ```
+
+- Run CB-Spider & CB-Tumblebug
+
+  Reference to https://github.com/cloud-barista/cb-tumblebug#3-cb-tumblebug-%EC%8B%A4%ED%96%89
+
+- Run CB-MCKS
+
+  Reference to https://github.com/cloud-barista/cb-mcks#run
+
+- Run chartmuseum in local
+  ```
+  cd $APP_ROOT/scripts
+  ./run_chartmuseum.sh
+  ```
+  You can access your chartmusem at http://localhost:38080
+
+  If you cannot download a chartmuseum package,
+  you can get the package in https://github.com/helm/chartmuseum/releases
+
+- Register Cloud Connection Info
+
+  Reference to https://github.com/cloud-barista/cb-mcks/tree/master/docs/test#cloud-connection-info-%EB%93%B1%EB%A1%9D
+
+  Update hard-coded cloud connection configs as your cloud connection configs in `cb-ladybug/pkg/core/service/mcas.go:makeClusterReq()`
+
+- Create `lb-ns` namespace
+
+  ```bash
+  cd <CB-MCKS directory>/docs/test
+  ./ns-create.sh lb-ns
+  ```
+
+- Enable MCAS
+  ```bash
+  cd $APP_ROOT/scripts
+  ./enable-mcas.sh lb-ns
+  ```
+
+- Upload sample packages
+  ```bash
+  cd $APP_ROOT/scripts
+  ./upload_package.sh lb-ns ./sample/chartmuseum-3.1.0.tgz
+  ./upload_package.sh lb-ns ./sample/chartmuseum-3.2.0.tgz
+  ./upload_package.sh lb-ns ./sample/nginx-9.5.12.tgz
+  ```
+
+- Install an app(ex. nginx) instance
+  ```bash
+  ./install-app-instance.sh lb-ns nginx-01 nginx ./sample/nginx-values.yaml
+  ```
+
+- Uninstall the app instance
+  ```bash
+  ./uninstall-app-instance.sh lb-ns nginx-01
+  ```
+
+- Delete the package
+  ```bash
+  ./delete-package.sh lb-ns nginx 9.5.12
+  ```
+
+- Disable MCAS
+  ```bash
+  cd $APP_ROOT/scripts
+  ./disable-mcas.sh lb-ns
+  ```

@@ -6,15 +6,20 @@ import (
 
 	"github.com/cloud-barista/cb-ladybug/pkg/core/common"
 	"github.com/cloud-barista/cb-ladybug/pkg/utils/lang"
+	helmtime "helm.sh/helm/v3/pkg/time"
 )
 
 type (
 	AppInstance struct {
 		//	Model
-		Name        string `json:"name"`
-		Namespace   string `json:"namespace"`
-		PackageName string `json:"packageName"`
-		Version     string `json:"version"`
+		Name          string        `json:"name"`
+		Namespace     string        `json:"namespace"`
+		PackageName   string        `json:"packageName"`
+		Version       string        `json:"version"`
+		FirstDeployed helmtime.Time `json:"first_deployed,omitempty"`
+		LastDeployed  helmtime.Time `json:"last_deployed,omitempty"`
+		Description   string        `json:"description,omitempty"`
+		Status        string        `json:"status,omitempty"`
 	}
 
 	AppInstanceList struct {
@@ -24,13 +29,16 @@ type (
 	}
 
 	AppInstanceReq struct {
-		InstanceName string        `json:"instance"`
-		PackageName  string        `json:"package"`
-		Version      string        `json:"version,omitempty"`
-		Wait         bool          `json:"wait,omitempty"`
-		Timeout      time.Duration `json:timeout,omitempty"`
-		Force        bool          `json:"force,omitempty"`
-		UpgradeCRDs  bool          `json:"upgradeCRDs,omitempty"`
+		Data struct {
+			InstanceName string        `json:"instance"`
+			PackageName  string        `json:"package"`
+			Version      string        `json:"version,omitempty"`
+			Wait         bool          `json:"wait,omitempty"`
+			Timeout      time.Duration `json:"timeout,omitempty"`
+			Force        bool          `json:"force,omitempty"`
+			UpgradeCRDs  bool          `json:"upgradeCRDs,omitempty"`
+		}
+		ValuesYaml string `form:"values,omitempty"`
 	}
 )
 
@@ -102,27 +110,27 @@ func (self *AppInstanceList) SelectList() error {
 */
 func AppInstanceReqDef(req *AppInstanceReq) {
 	printAppInstanceReq(req)
-	if req.Timeout == 0 {
+	if req.Data.Timeout == 0 {
 		// Set timeout to helm default timeout(300 second)
-		req.Timeout = 300
+		req.Data.Timeout = 300
 	}
 	printAppInstanceReq(req)
 }
 
 func AppInstanceReqValidate(req *AppInstanceReq) error {
-	if len(req.InstanceName) == 0 {
+	if len(req.Data.InstanceName) == 0 {
 		return errors.New("app instance name is empty")
 	} else {
-		err := lang.CheckName(req.InstanceName)
+		err := lang.CheckName(req.Data.InstanceName)
 		if err != nil {
 			return err
 		}
 	}
 
-	if len(req.PackageName) == 0 {
+	if len(req.Data.PackageName) == 0 {
 		return errors.New("app package name is empty")
 	} else {
-		err := lang.CheckName(req.PackageName)
+		err := lang.CheckName(req.Data.PackageName)
 		if err != nil {
 			return err
 		}
@@ -132,11 +140,11 @@ func AppInstanceReqValidate(req *AppInstanceReq) error {
 }
 
 func printAppInstanceReq(req *AppInstanceReq) {
-	common.CBLog.Debugf("AppInstanceReq.InstanceName:\t%v", req.InstanceName)
-	common.CBLog.Debugf("AppInstanceReq.PackageName:\t%v", req.PackageName)
-	common.CBLog.Debugf("AppInstanceReq.Version:\t%v", req.Version)
-	common.CBLog.Debugf("AppInstanceReq.Wait:\t\t%v", req.Wait)
-	common.CBLog.Debugf("AppInstanceReq.Timeout:\t%v", req.Timeout*time.Second)
-	common.CBLog.Debugf("AppInstanceReq.Force:\t\t%v", req.Force)
-	common.CBLog.Debugf("AppInstanceReq.UpgradeCRDs:\t%v", req.UpgradeCRDs)
+	common.CBLog.Debugf("AppInstanceReq.InstanceName:\t%v", req.Data.InstanceName)
+	common.CBLog.Debugf("AppInstanceReq.PackageName:\t%v", req.Data.PackageName)
+	common.CBLog.Debugf("AppInstanceReq.Version:\t%v", req.Data.Version)
+	common.CBLog.Debugf("AppInstanceReq.Wait:\t\t%v", req.Data.Wait)
+	common.CBLog.Debugf("AppInstanceReq.Timeout:\t%v", req.Data.Timeout*time.Second)
+	common.CBLog.Debugf("AppInstanceReq.Force:\t\t%v", req.Data.Force)
+	common.CBLog.Debugf("AppInstanceReq.UpgradeCRDs:\t%v", req.Data.UpgradeCRDs)
 }

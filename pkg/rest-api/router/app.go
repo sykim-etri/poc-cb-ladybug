@@ -1,6 +1,8 @@
 package router
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/cloud-barista/cb-ladybug/pkg/core/common"
@@ -67,9 +69,24 @@ func CreateApp(c echo.Context) error {
 	}
 
 	appInstanceReq := &model.AppInstanceReq{}
-	if err := c.Bind(appInstanceReq); err != nil {
+	reqData := c.FormValue("reqData")
+	err = json.Unmarshal([]byte(reqData), &appInstanceReq.Data)
+	if err != nil {
 		common.CBLog.Error(err)
 		return SendMessage(c, http.StatusBadRequest, err.Error())
+	}
+
+	fhValues, err := c.FormFile("valuesFile")
+	if fhValues != nil {
+		fileValues, _ := fhValues.Open()
+		defer fileValues.Close()
+		bytesValues, err := ioutil.ReadAll(fileValues)
+		if err != nil {
+			common.CBLog.Error(err)
+			return SendMessage(c, http.StatusBadRequest, err.Error())
+		}
+
+		appInstanceReq.ValuesYaml = string(bytesValues)
 	}
 
 	model.AppInstanceReqDef(appInstanceReq)

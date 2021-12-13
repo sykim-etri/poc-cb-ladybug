@@ -2,8 +2,8 @@
 # -----------------------------------------------------------------
 # usage
 if [ "$#" -lt 1 ]; then 
-	echo "./install-app-instance.sh <namespace> <app instance name> <app package name>"
-	echo "./install-app-instance.sh lb-ns app-instance-01 app-package-01"
+	echo "./install-app-instance.sh <namespace> <app instance name> <app package name> <values.yaml file name>"
+	echo "./install-app-instance.sh lb-ns app-instance-01 app-package-01 values.yaml"
 	exit 0; 
 fi
 
@@ -35,8 +35,16 @@ if [ "$#" -gt 2 ]; then v_PACKAGE_NAME="$3"; else	v_PACKAGE_NAME="${PACKAGE_NAME
 if [ "${v_PACKAGE_NAME}" == "" ]; then 
 	read -e -p "App package name  ? : "  v_PACKAGE_NAME
 fi
-if [ "${v_PACKAGE_NAME}" == "" ]; then echo "[ERROR] missing <app package name>"; exit -1; fi
+if [ "${v_PACKAGE_NAME}" == "" ]; then echo "[ERROR:] missing <app package name>"; exit -1; fi
 
+# 4. Values Yaml File Name
+if [ "$#" -gt 3 ]; then v_VALUES_YAML_FILE_NAME="$4"; else	v_VALUES_YAML_FILE="${VALUES_YAML_FILE_NAME}"; fi
+if [ "${v_VALUES_YAML_FILE_NAME}" != "" ]; then
+    v_VALUES_YAML_RAW_DATA=$(<${v_VALUES_YAML_FILE_NAME})
+    v_VALUES_YAML_JSON_DATA=$(echo ${v_VALUES_YAML_RAW_DATA} | jq -Rs .)
+    v_VALUES_YAML_JSON_DATA=$(echo ${v_VALUES_YAML_JSON_DATA} | base64)
+    #echo $v_VALUES_YAML_JSON_DATA
+fi
 
 c_URL_LADYBUG_NS="${c_URL_LADYBUG}/ns/${v_NAMESPACE}"
 
@@ -48,6 +56,7 @@ echo "[INFO]"
 echo "- Namespace                  is '${v_NAMESPACE}'"
 echo "- App instance name          is '${v_INSTANCE_NAME}'"
 echo "- App package name           is '${v_PACKAGE_NAME}'"
+echo "- values.yaml file name      is '${v_VALUES_YAML_FILE_NAME}'"
 
 
 # ------------------------------------------------------------------------------
@@ -56,16 +65,30 @@ install_app_instance() {
 
 	if [ "$LADYBUG_CALL_METHOD" == "REST" ]; then
 
-		resp=$(curl -sX POST ${c_URL_LADYBUG_NS}/apps -H "${c_CT}" -H "${c_AUTH}" -d @- <<EOF
-		{
-			"instance": "${v_INSTANCE_NAME}",
-			"package": "${v_PACKAGE_NAME}",
+                APP_INSTANCE_REQ='{
+			"instance": "'${v_INSTANCE_NAME}'",
+			"package": "'${v_PACKAGE_NAME}'",
 			"wait": true,
 			"force": false,
 			"upgradeCRDs": false
-		}
-EOF
-		); echo ${resp} | jq
+		}'
+                APP_INSTANCE_REQ_VALUES_YAML_FILE=${v_VALUES_YAML_FILE_NAME}
+
+#		resp=$(curl -sX POST ${c_URL_LADYBUG_NS}/apps -H "Content-Type:multipart/form-data" -H "${c_AUTH}" -F "reqData=${APP_INSTANCE_REQ}")
+                resp=$(curl -sX POST ${c_URL_LADYBUG_NS}/apps -H "Content-Type:multipart/form-data" -H "${c_AUTH}" -F "reqData=${APP_INSTANCE_REQ}" -F "valuesFile=@${APP_INSTANCE_REQ_VALUES_YAML_FILE}")
+                echo ${resp} | jq
+
+#		resp=$(curl -sX POST ${c_URL_LADYBUG_NS}/apps -H "${c_CT}" -H "${c_AUTH}" -d @- <<EOF
+#		{
+#			"instance": "${v_INSTANCE_NAME}",
+#			"package": "${v_PACKAGE_NAME}",
+#			"valuesYaml": "${v_VALUES_YAML_JSON_DATA}"
+#			"wait": true,
+#			"force": false,
+#			"upgradeCRDs": false
+#		}
+#EOF
+#		); echo ${resp} | jq
 
 	elif [ "$LADYBUG_CALL_METHOD" == "GRPC" ]; then
 

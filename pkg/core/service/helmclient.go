@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/cloud-barista/cb-ladybug/pkg/core/common"
-	hc "github.com/mittwald/go-helm-client"
+	helmclient "github.com/mittwald/go-helm-client"
 	"helm.sh/helm/v3/pkg/repo"
 )
 
@@ -11,9 +11,9 @@ const (
 	defaultHelmRepoConfigPath = "./.go-helm-client/.helmrepo"
 )
 
-func getHelmClient(namespace string) (hc.Client, error) {
+func getHelmClient(namespace string) (helmclient.Client, error) {
 	// Create global HelmClient for repository
-	opt := &hc.Options{
+	opt := &helmclient.Options{
 		Namespace:        namespace,
 		RepositoryCache:  defaultHelmCachePath,
 		RepositoryConfig: defaultHelmRepoConfigPath,
@@ -21,18 +21,20 @@ func getHelmClient(namespace string) (hc.Client, error) {
 		Linting:          true,
 	}
 
-	hcGeneral, err := hc.New(opt)
+	hcGeneral, err := helmclient.New(opt)
 	if err != nil {
 		common.CBLog.Errorf(err.Error())
 		return nil, err
 	}
 
+	hcGeneral.UpdateChartRepos()
+
 	return hcGeneral, nil
 }
 
-func getHelmClientFromKubeConf(namespace string, kubeConf *string) (hc.Client, error) {
-	opt := &hc.KubeConfClientOptions{
-		Options: &hc.Options{
+func getHelmClientFromKubeConf(namespace string, kubeConf *string) (helmclient.Client, error) {
+	opt := &helmclient.KubeConfClientOptions{
+		Options: &helmclient.Options{
 			Namespace:        namespace,
 			RepositoryCache:  defaultHelmCachePath,
 			RepositoryConfig: defaultHelmRepoConfigPath,
@@ -43,11 +45,13 @@ func getHelmClientFromKubeConf(namespace string, kubeConf *string) (hc.Client, e
 		KubeConfig:  []byte(*kubeConf),
 	}
 
-	hcKube, err := hc.NewClientFromKubeConf(opt)
+	hcKube, err := helmclient.NewClientFromKubeConf(opt)
 	if err != nil {
 		common.CBLog.Errorf(err.Error())
 		return nil, err
 	}
+
+	hcKube.UpdateChartRepos()
 
 	return hcKube, nil
 }

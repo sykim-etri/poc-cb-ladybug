@@ -30,7 +30,7 @@ func TestGetAllCharts(t *testing.T) {
 func TestChartCRD(t *testing.T) {
 	// upload a chart
 	cm := NewChartmuseum(repoName)
-	err := cm.UploadChart("../../../../scripts/chartmuseum-3.2.0.tgz")
+	err := cm.UploadChart("../../../../scripts/sample/chartmuseum-3.2.0.tgz")
 	if err != nil {
 		t.Fatalf("Chartmuseum.UploadChart error - cause=%v : %s", err, lang.GetFuncName())
 	}

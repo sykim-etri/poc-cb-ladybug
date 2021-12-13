@@ -8,7 +8,8 @@ import (
 
 	"github.com/cloud-barista/cb-ladybug/pkg/core/common"
 	"github.com/cloud-barista/cb-ladybug/pkg/core/model"
-	hc "github.com/mittwald/go-helm-client"
+	helmclient "github.com/mittwald/go-helm-client"
+	helmtime "helm.sh/helm/v3/pkg/time"
 )
 
 func ListAppInstance(namespace string) (*model.AppInstanceList, error) {
@@ -90,7 +91,7 @@ func CreateAppInstance(namespace string, req *model.AppInstanceReq) (*model.AppI
 			return nil, err
 		}
 	} else {
-		return nil, errors.New(fmt.Sprintf("no available cluster to deploy the app '%s'", req.InstanceName))
+		return nil, errors.New(fmt.Sprintf("no available cluster to deploy the app '%s'", req.Data.InstanceName))
 	}
 
 	return nil, nil
@@ -152,6 +153,10 @@ func listAppInstance(namespace string, kubeConf *string) (*model.AppInstanceList
 			rel.Name, rel.Chart.Metadata.Name, rel.Chart.Metadata.Version)
 
 		appInst := model.NewAppInstance(namespace, rel.Name, rel.Chart.Metadata.Name, rel.Chart.Metadata.Version)
+		appInst.FirstDeployed = helmtime.Time(rel.Info.FirstDeployed)
+		appInst.LastDeployed = helmtime.Time(rel.Info.LastDeployed)
+		appInst.Description = rel.Info.Description
+		appInst.Status = rel.Info.Status.String()
 
 		appInstList.Items = append(appInstList.Items, *appInst)
 	}
@@ -171,6 +176,10 @@ func getAppInstance(namespace string, kubeConf *string, appInstName string) (*mo
 	}
 
 	appInst := model.NewAppInstance(namespace, rel.Name, rel.Chart.Metadata.Name, rel.Chart.Metadata.Version)
+	appInst.FirstDeployed = helmtime.Time(rel.Info.FirstDeployed)
+	appInst.LastDeployed = helmtime.Time(rel.Info.LastDeployed)
+	appInst.Description = rel.Info.Description
+	appInst.Status = rel.Info.Status.String()
 
 	return appInst, nil
 }
@@ -181,21 +190,23 @@ func installAppInstance(namespace string, kubeConf *string, req *model.AppInstan
 		return err
 	}
 
-	chartSpec := hc.ChartSpec{
-		ReleaseName:     req.InstanceName,
-		ChartName:       namespace + "/" + req.PackageName,
-		Namespace:       namespace,
-		Version:         req.Version,
-		CreateNamespace: true,
-		Wait:            req.Wait,
-		Timeout:         req.Timeout * time.Second,
-		UpgradeCRDs:     req.UpgradeCRDs,
-		Force:           req.Force,
+	chartSpec := helmclient.ChartSpec{
+		ReleaseName:      req.Data.InstanceName,
+		ChartName:        namespace + "/" + req.Data.PackageName,
+		Namespace:        namespace,
+		ValuesYaml:       req.ValuesYaml,
+		Version:          req.Data.Version,
+		CreateNamespace:  true,
+		Wait:             req.Data.Wait,
+		Timeout:          req.Data.Timeout * time.Second,
+		UpgradeCRDs:      req.Data.UpgradeCRDs,
+		Force:            req.Data.Force,
+		PostRendererPath: "../../scripts/sample/pr-kust.sh",
 	}
 
 	common.CBLog.Debugf("ChartSpec.ReleaseName: %s, ChartSpec.ChartName: %s", chartSpec.ReleaseName, chartSpec.ChartName)
 
-	common.CBLog.Infof("try to install the application '%s'", req.InstanceName)
+	common.CBLog.Infof("try to install the application '%s'", req.Data.InstanceName)
 	if _, err := hcKube.InstallOrUpgradeChart(context.Background(), &chartSpec); err != nil {
 		return err
 	}
@@ -209,7 +220,7 @@ func uninstallAppInstance(namespace string, kubeConf *string, appInstName string
 		return err
 	}
 
-	chartSpec := hc.ChartSpec{
+	chartSpec := helmclient.ChartSpec{
 		ReleaseName: appInstName,
 		Timeout:     600 * time.Second,
 	}
